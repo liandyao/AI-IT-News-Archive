@@ -6,16 +6,16 @@
 
 - **RSS新闻采集**: 从多个IT和AI相关网站获取最新新闻
   - IT之家
-  - 36氪
+  - 36氪 
   - 少数派
 
-- **智能摘要**: 使用Qwen3.5-Flash大语言模型生成新闻摘要
+- **智能摘要**: 使用Qwen3-30B-A3B大语言模型生成新闻摘要
   - 自动提取新闻核心内容
-  - 降级机制：API不可用时使用基于规则的摘要
+  - 直接使用大模型生成，不使用降级机制
 
 - **趋势分析**: 分析每日新闻关键词和趋势
   - 关键词提取
-  - 热点话题统计
+  - 热点话题分析
 
 - **自动化归档**: 自动将新闻摘要和趋势分析推送到GitHub
   - 每日新闻报告
@@ -42,10 +42,15 @@ pip install -r requirements.txt
 ## 配置说明
 
 1. **API密钥配置**：
-   - 编辑 `main.py` 文件，设置你的Qwen API密钥：
-   ```python
-   api_key = "your_qwen_api_key_here"
+   - 推荐使用环境变量设置Qwen API密钥：
+   ```bash
+   # Windows
+   set QWEN_API_KEY=your_qwen_api_key_here
+   
+   # Linux/Mac
+   export QWEN_API_KEY=your_qwen_api_key_here
    ```
+   - 或直接编辑 `main.py` 文件中的API密钥配置
 
 2. **GitHub配置**：
    - 确保你有GitHub仓库的推送权限
@@ -77,12 +82,15 @@ AI-IT-News-Archive/
 ├── main.py                 # 主程序入口
 ├── news_scraper.py         # RSS新闻采集模块
 ├── qwen_llm.py            # Qwen LLM API集成
-├── llm_summarizer.py      # 基于规则的摘要生成
-├── news_analyzer.py       # 新闻趋势分析
 ├── git_utils.py           # Git工具函数
 ├── auto_update.py         # 自动更新脚本
+├── test_llm.py            # LLM测试脚本
+├── test_summary.py        # 摘要生成测试脚本
 ├── requirements.txt       # 依赖包列表
 ├── README.md             # 项目说明文档
+├── .github/              # GitHub配置目录
+│   └── workflows/        # GitHub Actions工作流
+│       └── daily-update.yml  # 每日更新工作流
 └── news_archives/        # 新闻归档目录
 ```
 
@@ -104,15 +112,13 @@ AI-IT-News-Archive/
 - `requests`: HTTP请求
 - `feedparser`: RSS解析
 - `openai`: OpenAI API客户端
-- `jieba`: 中文分词
-- `wordcloud`: 词云生成
 
 ## 注意事项
 
 1. **API限制**: Qwen API有调用频率限制，建议合理安排调用频率
 2. **网络环境**: 确保网络连接正常，能够访问RSS源和API服务
 3. **GitHub权限**: 确保有GitHub仓库的推送权限
-4. **成本控制**: 为节约API成本，系统实现了降级机制
+4. **API密钥安全**: 建议使用环境变量存储API密钥，避免硬编码在代码中
 
 ## 故障排除
 

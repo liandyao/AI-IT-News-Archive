@@ -8,10 +8,8 @@ class QwenLLM:
         初始化Qwen LLM
         :param api_key: API密钥
         """
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.scnet.cn/api/llm/v1"
-        )
+        self.api_key = api_key
+        self.base_url = "https://api.scnet.cn/api/llm/v1"
     
     def generate_summary(self, news_title: str, news_source: str, description: str = "") -> str:
         """
@@ -21,37 +19,44 @@ class QwenLLM:
         :param description: 新闻描述/内容
         :return: 生成的摘要
         """
-        try:
-            # 构建提示词，如果有description则使用description，否则使用title
-            if description and len(description) > 50:
-                content = f"标题：{news_title}\n\n内容：{description[:800]}"
-                system_prompt = "你是一个专业的新闻摘要助手。请根据提供的新闻标题和正文内容，生成一个简洁准确的摘要（2-3句话），突出核心信息、关键数据和重要结论。不要简单重复标题。"
-            else:
-                content = f"标题：{news_title}"
-                system_prompt = "你是一个专业的新闻摘要助手。请根据新闻标题，推测并生成一个简洁准确的摘要（1-2句话），突出可能的核心内容。"
-            
+        from openai import OpenAI
+        
+        # 创建OpenAI客户端
+        client = OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url
+        )
+        
+        # 构建提示词
+        if description and len(description) > 50:
             messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": content}
+                {"role": "system", "content": "你是一个专业的新闻摘要助手。请直接返回摘要，不要包含任何思考过程。根据提供的新闻标题和正文内容，生成一个简洁准确的摘要（2-3句话），突出核心信息、关键数据和重要结论。不要简单重复标题。"},
+                {"role": "user", "content": f"新闻：\n标题：{news_title}\n内容：{description[:800]}\n\n请直接返回摘要："}
             ]
-            
-            completion = self.client.chat.completions.create(
-                model="Qwen3-30B-A3B",
-                messages=messages,
-                temperature=0.3,
-                max_tokens=150
-            )
-            
-            summary = completion.choices[0].message.content
-            if summary:
-                return summary.strip()
-            else:
-                # 当返回内容为None时的处理
-                return f""
-        except Exception as e:
-            print(f"调用Qwen LLM API时出错: {e}")
-            # 降级到基于规则的摘要
-            return f""
+        else:
+            messages = [
+                {"role": "system", "content": "你是一个专业的新闻摘要助手。请直接返回摘要，不要包含任何思考过程。根据新闻标题，推测并生成一个简洁准确的摘要（1-2句话），突出可能的核心内容。"},
+                {"role": "user", "content": f"新闻标题：{news_title}\n\n请直接返回摘要："}
+            ]
+        
+        # 调用API，使用stream=False
+        response = client.chat.completions.create(
+            model="Qwen3-30B-A3B",
+            messages=messages,
+            stream=False
+        )
+        
+        # 打印完整响应，用于调试
+        print("\nAPI响应:")
+        print(response)
+        
+        # 提取摘要
+        summary = response.choices[0].message.content
+        if summary:
+            return summary.strip()
+        else:
+            return "摘要生成失败，请检查API配置"
+
 
 def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]:
     """
@@ -96,27 +101,25 @@ def analyze_news_with_qwen(summarized_news: List[Dict], api_key: str) -> str:
     # 构建分析请求
     analysis_prompt = f"请分析以下IT和AI新闻的趋势，包括：\n1. 主要热点话题\n2. 技术发展趋势\n3. 行业动态\n4. 重要事件总结\n\n新闻内容：\n{all_summaries}"
     
-    try:
-        messages = [
-            {"role": "system", "content": "你是一个专业的新闻分析师，擅长分析IT和AI领域的新闻趋势，能够从大量新闻中提取关键信息并进行深度分析。"},
-            {"role": "user", "content": analysis_prompt}
-        ]
-        
-        completion = llm.client.chat.completions.create(
-            model="Qwen3-30B-A3B",
-            messages=messages,
-            temperature=0.3,
-            max_tokens=500
-        )
-        
-        analysis = completion.choices[0].message.content
-        if analysis:
-            return analysis.strip()
-        else:
-            return "无法生成趋势分析，请稍后再试。"
-    except Exception as e:
-        print(f"调用Qwen LLM进行趋势分析时出错: {e}")
-        return "无法生成趋势分析，请稍后再试。"
+    messages = [
+        {"role": "system", "content": "你是一个专业的新闻分析师，擅长分析IT和AI领域的新闻趋势，能够从大量新闻中提取关键信息并进行深度分析。"},
+        {"role": "user", "content": analysis_prompt}
+    ]
+    
+    completion = llm.client.chat.completions.create(
+        model="Qwen3-30B-A3B",
+        messages=messages,
+        temperature=0.3,
+        max_tokens=500
+    )
+    
+    message = completion.choices[0].message
+    # 检查content字段
+    if hasattr(message, 'content') and message.content:
+        return message.content.strip()
+    else:
+        return "趋势分析生成失败，请检查API配置"
+
 
 if __name__ == "__main__":
     # 测试数据
@@ -130,6 +133,6 @@ if __name__ == "__main__":
     ]
     
     # 这里需要填写真实的API密钥
-    api_key = os.environ.get('QWEN_API_KEY', 'sk-MjczLTExMTc0MTY2NjIzLTE3NzMzMTY2NjQ2MjU=')
+    api_key = os.environ.get('QWEN_API_KEY')
     summarized = summarize_news_with_qwen(test_news, api_key)
     print(summarized)

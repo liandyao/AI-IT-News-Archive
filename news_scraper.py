@@ -6,17 +6,11 @@ import time
 # 新闻网站RSS配置
 NEWS_RSS = {
     'IT之家': {
-        'url': 'https://www.ithome.com/rss/',
-        'keywords': ['AI', '人工智能', '科技', 'IT']
+        'url': 'https://www.ithome.com/rss/' 
     },
     '36氪': {
-        'url': 'https://36kr.com/feed',
-        'keywords': ['AI', '人工智能', '科技', 'IT']
-    },
-    '少数派': {
-        'url': 'https://sspai.com/feed',
-        'keywords': ['AI', '人工智能', '科技', 'IT']
-    }
+        'url': 'https://36kr.com/feed' 
+    }  
 }
 
 def get_todays_date():
@@ -37,7 +31,7 @@ def fetch_news_from_rss(site_name, rss_config):
         todays_news = []
         
         # 处理新闻条目
-        for entry in feed.entries[:20]:  # 只处理前20条
+        for entry in feed.entries[:]: 
             try:
                 title = entry.get('title', '').strip()
                 link = entry.get('link', '')
@@ -46,14 +40,7 @@ def fetch_news_from_rss(site_name, rss_config):
                 # 过滤条件
                 if not title or not link or len(title) < 10:
                     continue
-                
-                # 检查是否包含关键词
-                has_keyword = any(keyword in title for keyword in rss_config['keywords'])
-                
-                # 对于少数派，只保留科技相关内容
-                if site_name == '少数派' and not has_keyword:
-                    continue
-                
+             
                 # 获取新闻内容/描述
                 description = entry.get('description', '').strip()
                 # 清理HTML标签
@@ -71,8 +58,7 @@ def fetch_news_from_rss(site_name, rss_config):
                     'description': description
                 })
                 
-                if len(todays_news) >= 10:  # 每个网站最多抓取10条
-                    break
+               
             except Exception as e:
                 continue
         
