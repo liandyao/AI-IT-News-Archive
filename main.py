@@ -57,7 +57,7 @@ def main():
         return
     
     # 总结新闻（使用Qwen LLM）
-    api_key = os.environ.get('QWEN_API_KEY', 'sk-MjczLTExMTc0MTY2NjIzLTE3NzMzMTY2NjQ2MjU=')
+    api_key = os.environ.get('QWEN_API_KEY')
     summarized_news = summarize_news_with_qwen(news, api_key)
     
     # 生成每日总结

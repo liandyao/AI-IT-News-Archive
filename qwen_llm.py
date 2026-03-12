@@ -13,24 +13,33 @@ class QwenLLM:
             base_url="https://api.scnet.cn/api/llm/v1"
         )
     
-    def generate_summary(self, news_title: str, news_source: str) -> str:
+    def generate_summary(self, news_title: str, news_source: str, description: str = "") -> str:
         """
         使用Qwen LLM生成新闻摘要
         :param news_title: 新闻标题
         :param news_source: 新闻来源
+        :param description: 新闻描述/内容
         :return: 生成的摘要
         """
         try:
+            # 构建提示词，如果有description则使用description，否则使用title
+            if description and len(description) > 50:
+                content = f"标题：{news_title}\n\n内容：{description[:800]}"
+                system_prompt = "你是一个专业的新闻摘要助手。请根据提供的新闻标题和正文内容，生成一个简洁准确的摘要（2-3句话），突出核心信息、关键数据和重要结论。不要简单重复标题。"
+            else:
+                content = f"标题：{news_title}"
+                system_prompt = "你是一个专业的新闻摘要助手。请根据新闻标题，推测并生成一个简洁准确的摘要（1-2句话），突出可能的核心内容。"
+            
             messages = [
-                {"role": "system", "content": "你是一个专业的新闻摘要助手，需要对新闻标题进行简洁准确的摘要，突出核心内容和重要信息。"},
-                {"role": "user", "content": f"请为以下新闻标题生成一个简短的摘要，来源是{news_source}：{news_title}"}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": content}
             ]
             
             completion = self.client.chat.completions.create(
                 model="Qwen3-30B-A3B",
                 messages=messages,
                 temperature=0.3,
-                max_tokens=100
+                max_tokens=150
             )
             
             summary = completion.choices[0].message.content
@@ -38,11 +47,11 @@ class QwenLLM:
                 return summary.strip()
             else:
                 # 当返回内容为None时的处理
-                return f"这是一条来自{news_source}的新闻，标题为{news_title}，可能包含相关领域的最新动态。"
+                return f""
         except Exception as e:
             print(f"调用Qwen LLM API时出错: {e}")
             # 降级到基于规则的摘要
-            return f"这是一条来自{news_source}的新闻，标题为{news_title}，可能包含相关领域的最新动态。"
+            return f""
 
 def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]:
     """
@@ -58,9 +67,10 @@ def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]
         title = news.get('title', '')
         source = news.get('source', '')
         link = news.get('link', '')
+        description = news.get('description', '')
         
-        # 使用Qwen LLM生成摘要
-        summary = llm.generate_summary(title, source)
+        # 使用Qwen LLM生成摘要，传入description
+        summary = llm.generate_summary(title, source, description)
         
         summarized_news.append({
             'title': title,
@@ -120,6 +130,6 @@ if __name__ == "__main__":
     ]
     
     # 这里需要填写真实的API密钥
-    api_key = "sk-MjczLTExMTc0MTY2NjIzLTE3NzMzMTY2NjQ2MjU="
+    api_key = os.environ.get('QWEN_API_KEY', 'sk-MjczLTExMTc0MTY2NjIzLTE3NzMzMTY2NjQ2MjU=')
     summarized = summarize_news_with_qwen(test_news, api_key)
     print(summarized)

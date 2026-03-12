@@ -54,12 +54,21 @@ def fetch_news_from_rss(site_name, rss_config):
                 if site_name == '少数派' and not has_keyword:
                     continue
                 
+                # 获取新闻内容/描述
+                description = entry.get('description', '').strip()
+                # 清理HTML标签
+                if description:
+                    import re
+                    description = re.sub('<[^<]+?>', '', description)
+                    description = description[:1000]  # 限制长度
+                
                 # 添加新闻到列表
                 todays_news.append({
                     'title': title,
                     'link': link,
                     'date': pub_date,
-                    'source': site_name
+                    'source': site_name,
+                    'description': description
                 })
                 
                 if len(todays_news) >= 10:  # 每个网站最多抓取10条
