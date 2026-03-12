@@ -71,6 +71,43 @@ def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]
     
     return summarized_news
 
+def analyze_news_with_qwen(summarized_news: List[Dict], api_key: str) -> str:
+    """
+    使用Qwen LLM分析新闻趋势
+    :param summarized_news: 带有摘要的新闻列表
+    :param api_key: Qwen API密钥
+    :return: 趋势分析报告
+    """
+    llm = QwenLLM(api_key)
+    
+    # 收集所有新闻摘要
+    all_summaries = "\n".join([f"{news['title']}: {news['summary']}" for news in summarized_news])
+    
+    # 构建分析请求
+    analysis_prompt = f"请分析以下IT和AI新闻的趋势，包括：\n1. 主要热点话题\n2. 技术发展趋势\n3. 行业动态\n4. 重要事件总结\n\n新闻内容：\n{all_summaries}"
+    
+    try:
+        messages = [
+            {"role": "system", "content": "你是一个专业的新闻分析师，擅长分析IT和AI领域的新闻趋势，能够从大量新闻中提取关键信息并进行深度分析。"},
+            {"role": "user", "content": analysis_prompt}
+        ]
+        
+        completion = llm.client.chat.completions.create(
+            model="Qwen3-30B-A3B",
+            messages=messages,
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        analysis = completion.choices[0].message.content
+        if analysis:
+            return analysis.strip()
+        else:
+            return "无法生成趋势分析，请稍后再试。"
+    except Exception as e:
+        print(f"调用Qwen LLM进行趋势分析时出错: {e}")
+        return "无法生成趋势分析，请稍后再试。"
+
 if __name__ == "__main__":
     # 测试数据
     test_news = [

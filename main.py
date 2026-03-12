@@ -1,10 +1,48 @@
 import datetime
 import os
 from news_scraper import fetch_all_news
-from llm_summarizer import summarize_news, generate_daily_summary
-from qwen_llm import summarize_news_with_qwen
+from qwen_llm import summarize_news_with_qwen, analyze_news_with_qwen
 from git_utils import push_to_github, clone_github_repo
-from news_analyzer import analyze_news_trends, generate_trend_report
+
+def generate_daily_summary(summarized_news):
+    """
+    生成每日新闻总结
+    """
+    # 分类新闻
+    ai_news = [news for news in summarized_news if 'AI' in news['summary'] or '人工智能' in news['summary']]
+    tech_news = [news for news in summarized_news if '科技' in news['summary'] or 'IT' in news['summary']]
+    other_news = [news for news in summarized_news if news not in ai_news and news not in tech_news]
+    
+    # 生成总结
+    summary = f"# 每日IT和AI新闻总结\n\n"
+    summary += f"## 概览\n"
+    summary += f"今日共收集到 {len(summarized_news)} 条新闻，其中AI相关新闻 {len(ai_news)} 条，科技相关新闻 {len(tech_news)} 条。\n\n"
+    
+    if ai_news:
+        summary += f"## AI新闻\n"
+        for i, news in enumerate(ai_news, 1):
+            summary += f"### {i}. {news['title']}\n"
+            summary += f"**来源:** {news['source']}\n"
+            summary += f"**摘要:** {news['summary']}\n"
+            summary += f"**链接:** {news['link']}\n\n"
+    
+    if tech_news:
+        summary += f"## 科技新闻\n"
+        for i, news in enumerate(tech_news, 1):
+            summary += f"### {i}. {news['title']}\n"
+            summary += f"**来源:** {news['source']}\n"
+            summary += f"**摘要:** {news['summary']}\n"
+            summary += f"**链接:** {news['link']}\n\n"
+    
+    if other_news:
+        summary += f"## 其他新闻\n"
+        for i, news in enumerate(other_news, 1):
+            summary += f"### {i}. {news['title']}\n"
+            summary += f"**来源:** {news['source']}\n"
+            summary += f"**摘要:** {news['summary']}\n"
+            summary += f"**链接:** {news['link']}\n\n"
+    
+    return summary
 
 def main():
     """主函数"""
@@ -20,11 +58,7 @@ def main():
     
     # 总结新闻（使用Qwen LLM）
     api_key = "sk-MjczLTExMTc0MTY2NjIzLTE3NzMzMTY2NjQ2MjU="  # 替换为真实的API密钥
-    if api_key and api_key != "your_qwen_api_key_here":
-        summarized_news = summarize_news_with_qwen(news, api_key)
-    else:
-        # 降级到基于规则的摘要
-        summarized_news = summarize_news(news)
+    summarized_news = summarize_news_with_qwen(news, api_key)
     
     # 生成每日总结
     daily_summary = generate_daily_summary(summarized_news)
@@ -37,12 +71,12 @@ def main():
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(daily_summary)
     
-    # 分析新闻趋势
+    # 分析新闻趋势（使用Qwen LLM）
     print("\n开始分析新闻趋势...")
-    trend_analysis = analyze_news_trends(summarized_news)
+    trend_analysis = analyze_news_with_qwen(summarized_news, api_key)
     
     # 生成趋势报告
-    trend_report = generate_trend_report(trend_analysis)
+    trend_report = f"# 每日IT和AI新闻趋势分析\n\n{trend_analysis}"
     trend_file = os.path.join(output_dir, f'{today}_trend_analysis.md')
     with open(trend_file, 'w', encoding='utf-8') as f:
         f.write(trend_report)
