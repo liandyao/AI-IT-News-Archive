@@ -2,13 +2,24 @@ import datetime
 import os
 from news_scraper import fetch_all_news
 
+def get_beijing_time():
+    """
+    获取东八区（北京时间）
+    :return: 北京时间
+    """
+    from datetime import timezone, timedelta
+    utc_now = datetime.datetime.now(timezone.utc)
+    beijing_tz = timezone(timedelta(hours=8))
+    return utc_now.astimezone(beijing_tz)
+
 def generate_news_md(news_items):
     """
     生成新闻MD文件内容
     :param news_items: 新闻列表
     :return: MD格式的新闻内容
     """
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    beijing_now = get_beijing_time()
+    today = beijing_now.strftime('%Y-%m-%d')
     md_content = f"# 每日IT和AI新闻\n\n"
     md_content += f"## 概览\n"
     md_content += f"日期: {today}\n"
@@ -46,9 +57,9 @@ def save_news_to_md(news_items):
     :param news_items: 新闻列表
     :return: 保存的文件路径
     """
-    now = datetime.datetime.now()
-    today = now.strftime('%Y-%m-%d')
-    timestamp = now.strftime('%Y%m%d_%H%M')
+    beijing_now = get_beijing_time()
+    today = beijing_now.strftime('%Y-%m-%d')
+    timestamp = beijing_now.strftime('%Y%m%d_%H%M')
     
     # 按日期创建文件夹
     output_dir = os.path.join(os.getcwd(), 'news_archives', today)
@@ -67,7 +78,8 @@ def main():
     """
     主函数：获取新闻并保存到MD文件
     """
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    beijing_now = get_beijing_time()
+    today = beijing_now.strftime('%Y-%m-%d')
     print(f"开始处理{today}的IT和AI新闻...")
     
     # 获取新闻
