@@ -46,11 +46,16 @@ def save_news_to_md(news_items):
     :param news_items: 新闻列表
     :return: 保存的文件路径
     """
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
-    output_dir = os.path.join(os.getcwd(), 'news_archives')
+    now = datetime.datetime.now()
+    today = now.strftime('%Y-%m-%d')
+    timestamp = now.strftime('%Y%m%d_%H%M')
+    
+    # 按日期创建文件夹
+    output_dir = os.path.join(os.getcwd(), 'news_archives', today)
     os.makedirs(output_dir, exist_ok=True)
     
-    output_file = os.path.join(output_dir, f'{today}_news.md')
+    # 使用日期+时间命名文件
+    output_file = os.path.join(output_dir, f'{timestamp}_news.md')
     md_content = generate_news_md(news_items)
     
     with open(output_file, 'w', encoding='utf-8') as f:
