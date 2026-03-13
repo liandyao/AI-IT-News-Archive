@@ -38,7 +38,7 @@ def fetch_news_from_rss(site_name, rss_config):
         
         # 添加请求头，模拟浏览器
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0',
             'Accept': 'application/rss+xml, application/xml, text/xml',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
         }

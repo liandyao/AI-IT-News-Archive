@@ -2,7 +2,8 @@ name: Daily News Update
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 6 * * *'    # 北京时间14:00
+    - cron: '0 12 * * *'   # 北京时间20:00
   workflow_dispatch:
 
 permissions:
