@@ -1,5 +1,7 @@
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 import os
+import time
+import random
 from typing import List, Dict
 
 class QwenLLM:
@@ -10,6 +12,11 @@ class QwenLLM:
         """
         self.api_key = api_key
         self.base_url = "https://api.scnet.cn/api/llm/v1"
+        # 创建OpenAI客户端
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url
+        )
     
     def generate_summary(self, news_title: str, news_source: str, description: str = "") -> str:
         """
@@ -19,14 +26,6 @@ class QwenLLM:
         :param description: 新闻描述/内容
         :return: 生成的摘要
         """
-        from openai import OpenAI
-        
-        # 创建OpenAI客户端
-        client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
-        
         # 构建提示词
         if description and len(description) > 50:
             messages = [
@@ -39,23 +38,36 @@ class QwenLLM:
                 {"role": "user", "content": f"新闻标题：{news_title}\n\n请直接返回摘要："}
             ]
         
-        # 调用API，使用stream=False
-        response = client.chat.completions.create(
-            model="Qwen3-30B-A3B",
-            messages=messages,
-            stream=False
-        )
-        
-        # 打印完整响应，用于调试
-        print("\nAPI响应:")
-        print(response)
-        
-        # 提取摘要
-        summary = response.choices[0].message.content
-        if summary:
-            return summary.strip()
-        else:
-            return "摘要生成失败，请检查API配置"
+        # 调用API，使用stream=False，带重试机制
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model="Qwen3-30B-A3B",
+                    messages=messages,
+                    stream=False
+                )
+                # 打印完整响应，用于调试
+                print("\nAPI响应:")
+                print(response)
+                
+                # 提取摘要
+                summary = response.choices[0].message.content
+                if summary:
+                    return summary.strip()
+                else:
+                    return "摘要生成失败，请检查API配置"
+            except RateLimitError as e:
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    print(f"速率限制错误，等待 {wait_time:.2f} 秒后重试...")
+                    time.sleep(wait_time)
+                else:
+                    print("达到最大重试次数，返回失败")
+                    return "摘要生成失败：API速率限制"
+            except Exception as e:
+                print(f"API调用失败: {str(e)}")
+                return f"摘要生成失败：{str(e)}"
 
 
 def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]:
@@ -68,11 +80,13 @@ def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]
     llm = QwenLLM(api_key)
     summarized_news = []
     
-    for news in news_items:
+    for i, news in enumerate(news_items):
         title = news.get('title', '')
         source = news.get('source', '')
         link = news.get('link', '')
         description = news.get('description', '')
+        
+        print(f"处理第 {i+1} 条新闻: {title}")
         
         # 使用Qwen LLM生成摘要，传入description
         summary = llm.generate_summary(title, source, description)
@@ -83,6 +97,11 @@ def summarize_news_with_qwen(news_items: List[Dict], api_key: str) -> List[Dict]
             'source': source,
             'summary': summary
         })
+        
+        # 添加60秒延迟，确保每分钟只请求一条数据
+        if i < len(news_items) - 1:  # 最后一条新闻后不需要延迟
+            print("等待60秒后处理下一条新闻...")
+            time.sleep(60)
     
     return summarized_news
 
@@ -106,19 +125,34 @@ def analyze_news_with_qwen(summarized_news: List[Dict], api_key: str) -> str:
         {"role": "user", "content": analysis_prompt}
     ]
     
-    completion = llm.client.chat.completions.create(
-        model="Qwen3-30B-A3B",
-        messages=messages,
-        temperature=0.3,
-        max_tokens=500
-    )
-    
-    message = completion.choices[0].message
-    # 检查content字段
-    if hasattr(message, 'content') and message.content:
-        return message.content.strip()
-    else:
-        return "趋势分析生成失败，请检查API配置"
+    # 调用API，带重试机制
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            completion = llm.client.chat.completions.create(
+                model="Qwen3-30B-A3B",
+                messages=messages,
+                temperature=0.3,
+                max_tokens=500
+            )
+            
+            message = completion.choices[0].message
+            # 检查content字段
+            if hasattr(message, 'content') and message.content:
+                return message.content.strip()
+            else:
+                return "趋势分析生成失败，请检查API配置"
+        except RateLimitError as e:
+            if attempt < max_retries - 1:
+                wait_time = (2 ** attempt) + random.uniform(0, 1)
+                print(f"速率限制错误，等待 {wait_time:.2f} 秒后重试...")
+                time.sleep(wait_time)
+            else:
+                print("达到最大重试次数，返回失败")
+                return "趋势分析生成失败：API速率限制"
+        except Exception as e:
+            print(f"API调用失败: {str(e)}")
+            return f"趋势分析生成失败：{str(e)}"
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ name: Daily News Update
 
 on:
   schedule:
-    - cron: '0 18 * * *'
+    - cron: '0 14 * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,8 +26,6 @@ jobs:
         pip install -r requirements.txt
     
     - name: Run news update script
-      env:
-        QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
       run: |
         python main.py
     
